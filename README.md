@@ -11,7 +11,7 @@ PHP 8.3+ with the cURL extension.
 ## Install
 
 ```bash
-composer require sendery/php:^0.1
+composer require sendery/php:^0.1.1
 ```
 
 ## Set up
@@ -39,6 +39,26 @@ $receipt = $sendery->send(
 );
 
 echo $receipt['id'];
+```
+
+## Attachments
+
+Pass files through `attachments`. Use `Attachment::fromPath()` for a local file, or `new Attachment()` for file contents you already have.
+
+Send up to 10 files totaling 5 MB. See the [attachment reference](https://sendery.co/en/docs/send-email#section-5) for supported formats and limits.
+
+```php
+use Sendery\Attachment;
+
+$sendery->prepare(
+    to: 'alex@example.com',
+    template: 'welcome',
+    data: ['name' => 'Alex', 'action_url' => 'https://example.com/start'],
+    idempotencyKey: 'welcome-attachment-123',
+    attachments: [
+        Attachment::fromPath('/path/document.pdf', 'document.pdf', 'application/pdf'),
+    ],
+)->retry()->send();
 ```
 
 ## Retrieve an email

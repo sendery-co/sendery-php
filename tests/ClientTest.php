@@ -2,6 +2,7 @@
 
 use PHPUnit\Framework\TestCase;
 use Sendery\ApiException;
+use Sendery\Attachment;
 use Sendery\Client;
 
 class ClientTest extends TestCase
@@ -15,10 +16,11 @@ class ClientTest extends TestCase
             return count($calls) === 1 ? ['status' => 503, 'body' => '{}', 'retry_after' => '0'] : ['status' => 202, 'body' => '{"id":"msg","status":"queued"}'];
         });
         $data = ['name' => 'Original'];
-        $email = $client->prepare('alex@example.com', 'welcome', $data);
+        $email = $client->prepare('alex@example.com', 'welcome', $data, attachments: [new Attachment('invoice.pdf', "PDF\x00bytes", 'application/pdf')]);
         $data['name'] = 'Changed';
         $this->assertSame('msg', $email->retry()->send()['id']);
         $this->assertSame($calls[0], $calls[1]);
+        $this->assertSame(base64_encode("PDF\x00bytes"), json_decode($calls[1]['body'], true)['attachments'][0]['content']);
         $this->assertStringContainsString('Original', $calls[1]['body']);
         $client->get('msg');
         $this->assertSame('GET', $calls[2]['method']);
