@@ -16,7 +16,7 @@ composer require sendery/php:^0.1.1
 
 ## Set up
 
-Publish a `welcome` template with `name` and `action_url` variables, and create a [project API key](https://sendery.co/en/docs/authentication). Store it as `SENDERY_API_KEY` on your server.
+Choose a published template and create a [project API key](https://sendery.co/en/docs/authentication). Store the key as `SENDERY_API_KEY` on your server.
 
 ```bash
 export SENDERY_API_KEY="your_project_api_key"
@@ -24,7 +24,9 @@ export SENDERY_API_KEY="your_project_api_key"
 
 ## Send an email
 
-The response contains the accepted email’s `id` and `status`. For a template without variables, pass `data: []`; the SDK sends an empty JSON object.
+Replace `your-template` with your published template’s key and `data` with its variables.
+
+The response contains the email’s `id` and `status`. If your template has no variables, pass `data: []`.
 
 ```php
 require 'vendor/autoload.php';
@@ -34,27 +36,39 @@ use Sendery\Client;
 $sendery = new Client(getenv('SENDERY_API_KEY'));
 $receipt = $sendery->send(
     to: 'alex@example.com',
-    template: 'welcome',
+    template: 'your-template',
     data: ['name' => 'Alex', 'action_url' => 'https://example.com/start'],
 );
 
 echo $receipt['id'];
 ```
 
+## Send a specific version
+
+Choose a [published template version](https://sendery.co/en/docs/send-email#section-5) to keep sending it after newer versions are published. By default, Sendery uses the latest version.
+
+```php
+$receipt = $sendery->prepare(
+    to: 'alex@example.com',
+    template: 'your-template',
+    data: ['name' => 'Alex', 'action_url' => 'https://example.com/start'],
+)->version(3)->send();
+```
+
 ## Attachments
 
 Pass files through `attachments`. Use `Attachment::fromPath()` for a local file, or `new Attachment()` for file contents you already have.
 
-Send up to 10 files totaling 5 MB. See the [attachment reference](https://sendery.co/en/docs/send-email#section-5) for supported formats and limits.
+Send up to 10 files totaling 5 MB. See the [attachment reference](https://sendery.co/en/docs/send-email#section-6) for supported formats and limits.
 
 ```php
 use Sendery\Attachment;
 
 $sendery->prepare(
     to: 'alex@example.com',
-    template: 'welcome',
+    template: 'your-template',
     data: ['name' => 'Alex', 'action_url' => 'https://example.com/start'],
-    idempotencyKey: 'welcome-attachment-123',
+    idempotencyKey: 'your-idempotency-key',
     attachments: [
         Attachment::fromPath('/path/document.pdf', 'document.pdf', 'application/pdf'),
     ],
@@ -72,14 +86,14 @@ echo $message['status'];
 
 ## Retry a send
 
-Use a key such as `welcome-123` for one email, and [keep the payload unchanged on retries](https://sendery.co/en/docs/idempotency). `retry(3)` allows up to three additional attempts for temporary failures; `send()` alone makes one attempt.
+Use `retry(3)` for up to three extra attempts after temporary failures. Keep the same [idempotency key and email data](https://sendery.co/en/docs/idempotency) on every attempt.
 
 ```php
 $email = $sendery->prepare(
     to: 'alex@example.com',
-    template: 'welcome',
+    template: 'your-template',
     data: ['name' => 'Alex', 'action_url' => 'https://example.com/start'],
-    idempotencyKey: 'welcome-123',
+    idempotencyKey: 'your-idempotency-key',
 );
 $receipt = $email->retry(3)->send();
 ```
@@ -101,7 +115,7 @@ try {
 
 ## More
 
-See [idempotency and retries](https://sendery.co/en/docs/idempotency) for retry conditions, delays, and reusing a key across attempts.
+Learn how to [retry emails without duplicate sends](https://sendery.co/en/docs/idempotency).
 
 ## License
 

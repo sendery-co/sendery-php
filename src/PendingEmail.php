@@ -16,6 +16,18 @@ class PendingEmail
         $this->body = json_encode($payload, JSON_THROW_ON_ERROR);
     }
 
+    public function version(int $version): self
+    {
+        if ($version < 1) {
+            throw new \InvalidArgumentException('Version must be a positive integer.');
+        }
+        $payload = json_decode($this->body, flags: JSON_THROW_ON_ERROR);
+        $payload->version = $version;
+        $this->body = json_encode($payload, JSON_THROW_ON_ERROR);
+
+        return $this;
+    }
+
     public function retry(int $retries = 3): self
     {
         if ($retries < 0 || $retries > 5) {

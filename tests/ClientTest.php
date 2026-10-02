@@ -17,13 +17,27 @@ class ClientTest extends TestCase
         });
         $data = ['name' => 'Original'];
         $email = $client->prepare('alex@example.com', 'welcome', $data, attachments: [new Attachment('invoice.pdf', "PDF\x00bytes", 'application/pdf')]);
+        $email->version(3);
         $data['name'] = 'Changed';
         $this->assertSame('msg', $email->retry()->send()['id']);
         $this->assertSame($calls[0], $calls[1]);
+        $this->assertSame(3, json_decode($calls[0]['body'], true)['version']);
         $this->assertSame(base64_encode("PDF\x00bytes"), json_decode($calls[1]['body'], true)['attachments'][0]['content']);
         $this->assertStringContainsString('Original', $calls[1]['body']);
         $client->get('msg');
         $this->assertSame('GET', $calls[2]['method']);
+    }
+
+    public function test_version_is_optional_and_requires_a_positive_number(): void
+    {
+        $client = new Client('secret', 'https://example.com', function ($method, $url, $headers, $body): array {
+            $this->assertArrayNotHasKey('version', json_decode($body, true));
+
+            return ['status' => 202, 'body' => '{"id":"msg","status":"queued"}'];
+        });
+        $client->send('alex@example.com', 'welcome', []);
+        $this->expectException(InvalidArgumentException::class);
+        $client->prepare('alex@example.com', 'welcome', [])->version(0);
     }
 
     public function test_capacity_errors_are_not_retried(): void

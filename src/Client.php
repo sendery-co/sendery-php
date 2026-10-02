@@ -13,7 +13,7 @@ class Client
         }
     }
 
-    public function prepare(string $to, string $template, array $data, ?string $locale = null, ?string $idempotencyKey = null, array $attachments = []): PendingEmail
+    public function prepare(string $to, string $template, array $data, ?string $locale = null, ?string $idempotencyKey = null, array $attachments = [], ?int $version = null): PendingEmail
     {
         $size = 0;
         foreach ($attachments as $attachment) {
@@ -26,12 +26,14 @@ class Client
             throw new \InvalidArgumentException('Use at most 10 attachments, up to 5 MB combined.');
         }
 
-        return new PendingEmail($this, array_filter(['to' => $to, 'template' => $template, 'data' => (object) $data, 'locale' => $locale, 'attachments' => $attachments ?: null], fn ($value) => $value !== null), $idempotencyKey ?? bin2hex(random_bytes(16)));
+        $email = new PendingEmail($this, array_filter(['to' => $to, 'template' => $template, 'data' => (object) $data, 'locale' => $locale, 'attachments' => $attachments ?: null], fn ($value) => $value !== null), $idempotencyKey ?? bin2hex(random_bytes(16)));
+
+        return $version === null ? $email : $email->version($version);
     }
 
-    public function send(string $to, string $template, array $data, ?string $locale = null, ?string $idempotencyKey = null, array $attachments = []): array
+    public function send(string $to, string $template, array $data, ?string $locale = null, ?string $idempotencyKey = null, array $attachments = [], ?int $version = null): array
     {
-        return $this->prepare($to, $template, $data, $locale, $idempotencyKey, $attachments)->send();
+        return $this->prepare($to, $template, $data, $locale, $idempotencyKey, $attachments, $version)->send();
     }
 
     public function get(string $id): array
