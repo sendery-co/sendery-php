@@ -34,12 +34,12 @@ class ClientTest extends TestCase
         $client = new Client('secret', 'https://example.com', function ($method, $url, $headers, $body) use (&$calls): array {
             $calls[] = compact('method', 'url', 'headers', 'body');
 
-            return count($calls) === 1 ? ['status' => 503, 'body' => '{}', 'retry_after' => '0'] : ['status' => 202, 'body' => '{"id":"event","status":"accepted","matched_triggers":2}'];
+            return count($calls) === 1 ? ['status' => 503, 'body' => '{}', 'retry_after' => '0'] : ['status' => 202, 'body' => '{"id":"event","status":"accepted","matched_workflows":2}'];
         });
         $data = ['owner' => ['email' => 'alex@example.com']];
         $event = $client->event('listing.created', 'listing', '42', $data, 'attempt-1');
         $data['owner']['email'] = 'changed@example.com';
-        $this->assertSame(2, $event->retry()->send()['matched_triggers']);
+        $this->assertSame(2, $event->retry()->send()['matched_workflows']);
         $this->assertSame($calls[0], $calls[1]);
         $this->assertSame('https://example.com/api/v1/events', $calls[0]['url']);
         $this->assertSame('alex@example.com', json_decode($calls[0]['body'], true)['data']['owner']['email']);
