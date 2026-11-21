@@ -28,6 +28,27 @@ class ClientTest extends TestCase
         $this->assertSame('GET', $calls[2]['method']);
     }
 
+    public function test_events_freeze_nested_data_and_share_retry_handling(): void
+    {
+        $calls = [];
+        $client = new Client('secret', 'https://example.com', function ($method, $url, $headers, $body) use (&$calls): array {
+            $calls[] = compact('method', 'url', 'headers', 'body');
+
+            return count($calls) === 1 ? ['status' => 503, 'body' => '{}', 'retry_after' => '0'] : ['status' => 202, 'body' => '{"id":"event","status":"accepted","matched_triggers":2}'];
+        });
+        $data = ['owner' => ['email' => 'alex@example.com']];
+        $event = $client->event('listing.created', 'listing', '42', $data, 'attempt-1');
+        $data['owner']['email'] = 'changed@example.com';
+        $this->assertSame(2, $event->retry()->send()['matched_triggers']);
+        $this->assertSame($calls[0], $calls[1]);
+        $this->assertSame('https://example.com/api/v1/events', $calls[0]['url']);
+        $this->assertSame('alex@example.com', json_decode($calls[0]['body'], true)['data']['owner']['email']);
+        $client->getEvent('event/id');
+        $this->assertSame('https://example.com/api/v1/events/event%2Fid', $calls[2]['url']);
+        $client->forgetObject('listing', '42');
+        $this->assertSame('DELETE', $calls[3]['method']);
+    }
+
     public function test_version_is_optional_and_requires_a_positive_number(): void
     {
         $client = new Client('secret', 'https://example.com', function ($method, $url, $headers, $body): array {
@@ -72,5 +93,24 @@ class ClientTest extends TestCase
             return ['status' => 200, 'body' => '{"id":"msg","status":"queued"}'];
         });
         $client->send('a@example.com', 'welcome', [], idempotencyKey: 'event-123');
+    }
+
+    public function test_event_definitions_have_separate_response_validation(): void
+    {
+        $client = new Client('test', 'https://sendery.co', function ($method, $url, $headers, $body): array {
+            $this->assertArrayNotHasKey('Idempotency-Key', $headers);
+            if ($method === 'PUT') {
+                $this->assertSame('https://sendery.co/api/v1/event-types/document.signed', $url);
+                $this->assertSame('Document signed', json_decode($body, true)['label']);
+
+                return ['status' => 200, 'body' => '{"name":"document.signed","verified":false}'];
+            }
+
+            return ['status' => 200, 'body' => '{"events":[]}'];
+        });
+        $this->assertFalse($client->defineEvent('document.signed', ['label' => 'Document signed', 'object' => ['type' => 'document', 'label' => 'Document']])['verified']);
+        $this->assertSame([], $client->getEventTypes());
+        $this->expectException(ApiException::class);
+        $client->get('email');
     }
 }

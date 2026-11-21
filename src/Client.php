@@ -36,6 +36,37 @@ class Client
         return $this->prepare($to, $template, $data, $locale, $idempotencyKey, $attachments, $version)->send();
     }
 
+    public function defineEvent(string $name, array $definition): array
+    {
+        $definition['fields'] = (object) ($definition['fields'] ?? []);
+        $definition['recipients'] = (object) ($definition['recipients'] ?? []);
+
+        return $this->request('PUT', '/api/v1/event-types/'.rawurlencode($name), json_encode($definition, JSON_THROW_ON_ERROR));
+    }
+
+    public function getEventTypes(): array
+    {
+        return $this->request('GET', '/api/v1/event-types')['events'];
+    }
+
+    public function event(string $name, string $objectType, string $objectId, array $data, ?string $correlationId = null, ?string $idempotencyKey = null): PendingEvent
+    {
+        return new PendingEvent($this, array_filter([
+            'name' => $name, 'object' => ['type' => $objectType, 'id' => $objectId],
+            'data' => (object) $data, 'correlation_id' => $correlationId,
+        ], fn ($value) => $value !== null), $idempotencyKey ?? bin2hex(random_bytes(16)));
+    }
+
+    public function getEvent(string $id): array
+    {
+        return $this->request('GET', '/api/v1/events/'.rawurlencode($id));
+    }
+
+    public function forgetObject(string $type, string $id): array
+    {
+        return $this->request('DELETE', '/api/v1/event-objects', json_encode(['type' => $type, 'id' => $id], JSON_THROW_ON_ERROR));
+    }
+
     public function get(string $id): array
     {
         return $this->request('GET', '/api/v1/emails/'.rawurlencode($id));
@@ -61,7 +92,12 @@ class Client
         } catch (\JsonException) {
             throw new ApiException(0, 'invalid_response');
         }
-        if (! is_array($decoded) || ! is_string($decoded['id'] ?? null) || ! is_string($decoded['status'] ?? null)) {
+        $valid = is_array($decoded) && match (true) {
+            $path === '/api/v1/event-types' => is_array($decoded['events'] ?? null),
+            str_starts_with($path, '/api/v1/event-types/') => is_string($decoded['name'] ?? null) && is_bool($decoded['verified'] ?? null),
+            default => is_string($decoded['id'] ?? null) && is_string($decoded['status'] ?? null),
+        };
+        if (! $valid) {
             throw new ApiException(0, 'invalid_response');
         }
 
