@@ -35,9 +35,9 @@ use Sendery\Client;
 
 $sendery = new Client(getenv('SENDERY_API_KEY'));
 $receipt = $sendery->send(
-    to: 'alex@example.com',
+    to: 'steven@example.com',
     template: 'your-template',
-    data: ['name' => 'Alex', 'action_url' => 'https://example.com/start'],
+    data: ['name' => 'Steven', 'action_url' => 'https://example.com/start'],
 );
 
 echo $receipt['id'];
@@ -49,9 +49,9 @@ Choose a [published template version](https://sendery.co/en/docs/send-email#sect
 
 ```php
 $receipt = $sendery->prepare(
-    to: 'alex@example.com',
+    to: 'steven@example.com',
     template: 'your-template',
-    data: ['name' => 'Alex', 'action_url' => 'https://example.com/start'],
+    data: ['name' => 'Steven', 'action_url' => 'https://example.com/start'],
 )->version(3)->send();
 ```
 
@@ -65,9 +65,9 @@ Send up to 10 files totaling 5 MB. See the [attachment reference](https://sender
 use Sendery\Attachment;
 
 $sendery->prepare(
-    to: 'alex@example.com',
+    to: 'steven@example.com',
     template: 'your-template',
-    data: ['name' => 'Alex', 'action_url' => 'https://example.com/start'],
+    data: ['name' => 'Steven', 'action_url' => 'https://example.com/start'],
     idempotencyKey: 'your-idempotency-key',
     attachments: [
         Attachment::fromPath('/path/document.pdf', 'document.pdf', 'application/pdf'),
@@ -90,9 +90,9 @@ Use `retry(3)` for up to three extra attempts after temporary failures. Keep the
 
 ```php
 $email = $sendery->prepare(
-    to: 'alex@example.com',
+    to: 'steven@example.com',
     template: 'your-template',
-    data: ['name' => 'Alex', 'action_url' => 'https://example.com/start'],
+    data: ['name' => 'Steven', 'action_url' => 'https://example.com/start'],
     idempotencyKey: 'your-idempotency-key',
 );
 $receipt = $email->retry(3)->send();
@@ -132,7 +132,7 @@ $receipt = $sendery->event(
     name: 'account.created',
     objectType: 'account',
     objectId: '842',
-    data: ['email' => 'alex@example.com', 'name' => 'Alex'],
+    data: ['email' => 'steven@example.com', 'name' => 'Steven'],
 )->retry()->send();
 ```
 

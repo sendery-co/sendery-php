@@ -16,7 +16,7 @@ class ClientTest extends TestCase
             return count($calls) === 1 ? ['status' => 503, 'body' => '{}', 'retry_after' => '0'] : ['status' => 202, 'body' => '{"id":"msg","status":"queued"}'];
         });
         $data = ['name' => 'Original'];
-        $email = $client->prepare('alex@example.com', 'welcome', $data, attachments: [new Attachment('invoice.pdf', "PDF\x00bytes", 'application/pdf')]);
+        $email = $client->prepare('steven@example.com', 'welcome', $data, attachments: [new Attachment('invoice.pdf', "PDF\x00bytes", 'application/pdf')]);
         $email->version(3);
         $data['name'] = 'Changed';
         $this->assertSame('msg', $email->retry()->send()['id']);
@@ -36,13 +36,13 @@ class ClientTest extends TestCase
 
             return count($calls) === 1 ? ['status' => 503, 'body' => '{}', 'retry_after' => '0'] : ['status' => 202, 'body' => '{"id":"event","status":"accepted","matched_workflows":2}'];
         });
-        $data = ['owner' => ['email' => 'alex@example.com']];
+        $data = ['owner' => ['email' => 'steven@example.com']];
         $event = $client->event('listing.created', 'listing', '42', $data, 'attempt-1');
         $data['owner']['email'] = 'changed@example.com';
         $this->assertSame(2, $event->retry()->send()['matched_workflows']);
         $this->assertSame($calls[0], $calls[1]);
         $this->assertSame('https://example.com/api/v1/events', $calls[0]['url']);
-        $this->assertSame('alex@example.com', json_decode($calls[0]['body'], true)['data']['owner']['email']);
+        $this->assertSame('steven@example.com', json_decode($calls[0]['body'], true)['data']['owner']['email']);
         $client->getEvent('event/id');
         $this->assertSame('https://example.com/api/v1/events/event%2Fid', $calls[2]['url']);
         $client->forgetObject('listing', '42');
@@ -56,9 +56,9 @@ class ClientTest extends TestCase
 
             return ['status' => 202, 'body' => '{"id":"msg","status":"queued"}'];
         });
-        $client->send('alex@example.com', 'welcome', []);
+        $client->send('steven@example.com', 'welcome', []);
         $this->expectException(InvalidArgumentException::class);
-        $client->prepare('alex@example.com', 'welcome', [])->version(0);
+        $client->prepare('steven@example.com', 'welcome', [])->version(0);
     }
 
     public function test_capacity_errors_are_not_retried(): void
