@@ -36,6 +36,18 @@ class Client
         return $this->prepare($to, $template, $data, $locale, $idempotencyKey, $attachments, $version)->send();
     }
 
+    /** Render a published template without sending or saving an email. */
+    public function render(string $template, array $data, ?string $locale = null, ?int $version = null): array
+    {
+        if ($version !== null && $version < 1) {
+            throw new \InvalidArgumentException('Version must be a positive integer.');
+        }
+
+        return $this->request('POST', '/api/v1/emails/render', json_encode(array_filter([
+            'template' => $template, 'data' => (object) $data, 'locale' => $locale, 'version' => $version,
+        ], fn ($value) => $value !== null), JSON_THROW_ON_ERROR));
+    }
+
     public function defineEvent(string $name, array $definition): array
     {
         $definition['fields'] = (object) ($definition['fields'] ?? []);
@@ -93,6 +105,7 @@ class Client
             throw new ApiException(0, 'invalid_response');
         }
         $valid = is_array($decoded) && match (true) {
+            $path === '/api/v1/emails/render' => is_string($decoded['subject'] ?? null) && is_string($decoded['html'] ?? null) && is_string($decoded['text'] ?? null),
             $path === '/api/v1/event-types' => is_array($decoded['events'] ?? null),
             str_starts_with($path, '/api/v1/event-types/') => is_string($decoded['name'] ?? null) && is_bool($decoded['verified'] ?? null),
             default => is_string($decoded['id'] ?? null) && is_string($decoded['status'] ?? null),

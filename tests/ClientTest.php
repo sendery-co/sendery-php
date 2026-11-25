@@ -7,6 +7,33 @@ use Sendery\Client;
 
 class ClientTest extends TestCase
 {
+    public function test_render_uses_a_separate_endpoint_and_does_not_send_a_recipient_or_attachments(): void
+    {
+        $client = new Client('snd_sandbox_secret', 'https://example.com', function ($method, $url, $headers, $body): array {
+            $this->assertSame('POST', $method);
+            $this->assertSame('https://example.com/api/v1/emails/render', $url);
+            $this->assertSame('Bearer snd_sandbox_secret', $headers['Authorization']);
+            $this->assertSame(['template' => 'welcome', 'data' => ['name' => 'Steven'], 'locale' => 'ja', 'version' => 2], json_decode($body, true));
+            $this->assertArrayNotHasKey('Idempotency-Key', $headers);
+
+            return ['status' => 200, 'body' => '{"subject":"Hello","html":"<p>Hello</p>","text":"Hello"}'];
+        });
+        $this->assertSame('Hello', $client->render('welcome', ['name' => 'Steven'], 'ja', 2)['subject']);
+    }
+
+    public function test_render_rejects_malformed_responses_and_propagates_capacity_errors(): void
+    {
+        foreach ([['status' => 200, 'body' => '{"html":"body"}'], ['status' => 429, 'body' => '{"code":"render_limit_exceeded"}']] as $response) {
+            $client = new Client('key', 'https://example.com', fn () => $response);
+            try {
+                $client->render('welcome', []);
+                $this->fail('Expected render error.');
+            } catch (ApiException $error) {
+                $this->assertSame($response['status'] === 200 ? 'invalid_response' : 'render_limit_exceeded', $error->errorCode);
+            }
+        }
+    }
+
     public function test_retries_preserve_payload_and_key_and_retrieve_status(): void
     {
         $calls = [];
