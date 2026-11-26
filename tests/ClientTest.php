@@ -64,12 +64,13 @@ class ClientTest extends TestCase
             return count($calls) === 1 ? ['status' => 503, 'body' => '{}', 'retry_after' => '0'] : ['status' => 202, 'body' => '{"id":"event","status":"accepted","matched_workflows":2}'];
         });
         $data = ['owner' => ['email' => 'steven@example.com']];
-        $event = $client->event('listing.created', 'listing', '42', $data, 'attempt-1');
+        $event = $client->event('listing.created', 'listing', '42', $data, 'attempt-1', language: 'ja');
         $data['owner']['email'] = 'changed@example.com';
         $this->assertSame(2, $event->retry()->send()['matched_workflows']);
         $this->assertSame($calls[0], $calls[1]);
         $this->assertSame('https://example.com/api/v1/events', $calls[0]['url']);
         $this->assertSame('steven@example.com', json_decode($calls[0]['body'], true)['data']['owner']['email']);
+        $this->assertSame('ja', json_decode($calls[0]['body'], true)['language']);
         $client->getEvent('event/id');
         $this->assertSame('https://example.com/api/v1/events/event%2Fid', $calls[2]['url']);
         $client->forgetObject('listing', '42');

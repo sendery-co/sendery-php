@@ -51,7 +51,6 @@ class Client
     public function defineEvent(string $name, array $definition): array
     {
         $definition['fields'] = (object) ($definition['fields'] ?? []);
-        $definition['recipients'] = (object) ($definition['recipients'] ?? []);
 
         return $this->request('PUT', '/api/v1/event-types/'.rawurlencode($name), json_encode($definition, JSON_THROW_ON_ERROR));
     }
@@ -61,11 +60,11 @@ class Client
         return $this->request('GET', '/api/v1/event-types')['events'];
     }
 
-    public function event(string $name, string $objectType, string $objectId, array $data, ?string $correlationId = null, ?string $idempotencyKey = null): PendingEvent
+    public function event(string $name, string $objectType, string $objectId, array $data, ?string $correlationId = null, ?string $idempotencyKey = null, ?string $language = null): PendingEvent
     {
         return new PendingEvent($this, array_filter([
             'name' => $name, 'object' => ['type' => $objectType, 'id' => $objectId],
-            'data' => (object) $data, 'correlation_id' => $correlationId,
+            'data' => (object) $data, 'correlation_id' => $correlationId, 'language' => $language,
         ], fn ($value) => $value !== null), $idempotencyKey ?? bin2hex(random_bytes(16)));
     }
 
